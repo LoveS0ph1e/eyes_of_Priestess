@@ -1,0 +1,25 @@
+# 部署样例：systemd 托管后端进程（沿用 AstrBot 范式：绑 127.0.0.1 + 自启 + 崩溃拉起）。
+# 安装：sudo cp deploy/readingsteiner-webui.service /etc/systemd/system/ && sudo systemctl enable --now readingsteiner-webui
+# ⚠️ 启用前先填好 .env（尤其 WEBUI_AUTH_SECRET）。
+# ⚠️ sudo 需密码、非交互不可用，enable 那步须手动执行。
+# ⚠️ venv 必须用 python3.12 创建（服务器已就绪 3.12.3 = EverOS 同版本），否则依赖解析会失败。
+
+[Unit]
+Description=ReadingSteiner Memory WebUI
+After=network.target docker.service
+# 若与 EverOS 同机，确保 EverOS 先就绪
+# After=everos.service
+
+[Service]
+Type=simple
+User=youruser
+WorkingDirectory=/home/youruser/readingsteiner-webui/backend
+EnvironmentFile=/home/youruser/readingsteiner-webui/deploy/.env
+ExecStart=/home/youruser/readingsteiner-webui/backend/.venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8761
+Restart=on-failure
+RestartSec=5
+# 内存保护（按你的服务器内存调整）：限制防失控
+MemoryMax=256M
+
+[Install]
+WantedBy=multi-user.target

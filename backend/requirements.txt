@@ -1,0 +1,10 @@
+# ReadingSteiner WebUI 后端依赖
+# ⚠️ 底层硬约束：Python >=3.12（见 pyproject.toml requires-python = ">=3.12"；不用 3.11，从 3.12 起稳定支持，不锁上限便于后续维护）。
+# 插件 pyproject.toml 同为 py312，保持一致。锁定下限版本。
+# 第一期只需 FastAPI + httpx（复用插件 everos_client 语义）；二三期再加 everos 包（仅 Linux 可装）。
+
+fastapi>=0.115.0
+uvicorn[standard]>=0.30.0
+httpx>=0.27.0
+pydantic>=2.7.0
+python-multipart>=0.0.9  # 表单登录用

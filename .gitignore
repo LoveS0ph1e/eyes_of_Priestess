@@ -1,0 +1,31 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+
+# Node / Svelte
+node_modules/
+.svelte-kit/
+build/
+frontend/build/
+vite-build/
+
+# 环境与密钥（绝不进 git）
+.env
+*.secret
+
+# 运行数据
+data/
+*.jsonl
+!docs/**/*.jsonl
+
+# IDE
+.idea/
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db

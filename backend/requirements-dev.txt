@@ -1,0 +1,6 @@
+# 开发依赖：测试 + lint（与插件 pyproject.toml 风格一致）
+
+pytest>=8.0.0
+pytest-asyncio>=0.23.0
+httpx>=0.27.0  # ASGI 测试客户端用 ASGITransport
+ruff>=0.5.0

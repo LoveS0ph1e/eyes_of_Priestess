@@ -1,0 +1,32 @@
+# ReadingSteiner WebUI 后端 —— 工具链与项目元数据（沿用插件 pyproject.toml 风格）
+
+# 项目元数据：底层依赖 Python >=3.12（硬约束：不用 3.11；从 3.12 起稳定支持）。
+# 仅设下限不设上限：便于后续升级到 3.13/3.14 时不需改约束。
+# pip/PyCharm/CI 读此字段：低于 3.12 拒绝安装/解析。
+[project]
+name = "readingsteiner-webui-backend"
+# 版本系列代号：Sarastro
+version = "0.1.0"
+description = "ReadingSteiner 记忆管理 WebUI 后端（FastAPI，独立服务）"
+requires-python = ">=3.12"
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "W", "UP", "B"]
+
+[tool.ruff.lint.per-file-ignores]
+# FastAPI 路由的惯用法：Depends/Query/Path 在参数默认值里调用。B008 对此误报，忽略。
+"app/api/routes/*" = ["B008"]
+# 测试桩里常预留未用导入/长行；细化阶段补真测试时再收紧。
+"tests/*" = ["E501"]
+
+[tool.ruff.format]
+quote-style = "double"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+python_files = ["test_*.py"]
