@@ -49,7 +49,7 @@ export const api = {
   get: (u: string) => req(u),
   post: (u: string, json?: unknown) => req(u, { method: "POST", json }),
   put: (u: string, json: unknown) => req(u, { method: "PUT", json }),
-  del: (u: string) => req(u, { method: "DELETE" }),
+  del: (u: string, json?: unknown) => req(u, { method: "DELETE", json }),
 };
 
 // ── covenant 资源 ──────────────────────────────────────────────────
@@ -66,9 +66,9 @@ export const covenant = {
   delete: (user_id: string) => api.del(`/api/covenant/${encodeURIComponent(user_id)}`),
 };
 
-// ── view 只读资源（对接 readonly.py；开发期 Mock 返空，接入真 EverOS 后出真数据）──
+// ── view 只读资源（对接 readonly.py；开发期 Mock 返空，真机 B5 后出真数据）──
 
-// 字段对齐后端 everos_gateway 的 ProfileDTO / EpisodeDTO（真机坐实）
+// 字段对齐后端 everos_gateway 的 ProfileDTO / EpisodeDTO（B5 真机坐实）
 // explicit/implicit 是结构化对象数组（非字符串）：
 //   explicit 项 = {category, description, evidence}
 //   implicit 项 = {trait, description, evidence, basis}
@@ -93,6 +93,22 @@ export interface EpisodePage {
   total: number;
   page: number;
   page_size: number;
+}
+
+// entry 删除（第二期，对接 readonly.py 的 plan/delete/reindex 三端点）
+export type ReindexMode = "incremental" | "full";
+
+export interface EpisodeDeletePreview {
+  plan_id: string;
+  is_empty: boolean;
+  render: string; // Palimpsest Plan.render() 的纯文本 diff，直接展示给 admin 确认
+}
+
+export interface EpisodeDeleteResult {
+  txn: string;
+  status: string;
+  reindex_mode: ReindexMode;
+  reindex_paths: string[];
 }
 
 const APP_ID = "astrbot";
@@ -131,5 +147,28 @@ export const view = {
       { user_id: uid, app_id: APP_ID, project_id: PROJECT_ID },
     );
     return (r.data ?? {}) as { episodes?: unknown[]; profiles?: unknown[]; [k: string]: unknown };
+  },
+  // entry_id 传 EverOS API 的复合形式（{owner_id}_{entry_id}，即 EpisodeView.entry_id
+  // 原样传入）——后端 strip_owner_prefix 负责剥离，前端不用自己拼/剥。
+  async planDeleteEpisode(uid: string, entryId: string): Promise<EpisodeDeletePreview> {
+    const r = await api.get(
+      `/api/view/episodes/${encodeURIComponent(uid)}/${encodeURIComponent(entryId)}/plan`,
+    );
+    return r.data as EpisodeDeletePreview;
+  },
+  async deleteEpisode(
+    uid: string,
+    entryId: string,
+    reindexMode: ReindexMode = "incremental",
+  ): Promise<EpisodeDeleteResult> {
+    const r = await api.del(
+      `/api/view/episodes/${encodeURIComponent(uid)}/${encodeURIComponent(entryId)}`,
+      { reindex_mode: reindexMode },
+    );
+    return r.data as EpisodeDeleteResult;
+  },
+  async reindexEpisodeTxn(uid: string, txn: string): Promise<unknown> {
+    const r = await api.post(`/api/view/episodes/${encodeURIComponent(uid)}/reindex/${encodeURIComponent(txn)}`);
+    return r.data;
   },
 };

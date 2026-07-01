@@ -1,0 +1,23 @@
+{
+  "name": "example-redact-span",
+  "description": "Template: surgically remove a misattributed term from an owner's episode/atomic_fact/foresight md and the plugin relationship cache. Fill in <owner_id>/<misattributed_term> before use; never commit a real plan with real ids (see plans/.gitignore).",
+  "layout": {
+    "everos_root": "~/.everos",
+    "plugin_relationships": "~/qqbot/astrbot/data/plugin_data/astrbot_plugin_readingsteiner/relationships",
+    "app_id": "astrbot",
+    "project_id": "default_project"
+  },
+  "selector": {
+    "owner_ids": ["<owner_id>"],
+    "kinds": ["episode", "atomic_fact", "foresight"],
+    "include_plugin_caches": true,
+    "content_regex": "<misattributed_term>"
+  },
+  "operation": {
+    "type": "redact_span",
+    "pattern": "(?:,\\s?|、)\\s*<misattributed_term>",
+    "replacement": "",
+    "ignore_case": true
+  },
+  "verify_term": "<misattributed_term>"
+}

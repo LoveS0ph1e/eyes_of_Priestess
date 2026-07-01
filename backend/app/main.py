@@ -21,6 +21,7 @@ from .core import config as config_module
 from .core.config import Settings
 from .modules.audit_log import AuditLog
 from .modules.covenant_store import CovenantStore
+from .modules.episode_editor import EpisodeEditor
 from .modules.everos_gateway import HTTPEverOSGateway, MockEverOSGateway
 
 
@@ -43,13 +44,32 @@ async def lifespan(app: FastAPI):
     # 单例初始化。AuditLog 目录在 record 时 mkdir，此处只建实例不创建文件。
     app.state.covenant_store = CovenantStore(settings.plugin_config_path)
     app.state.audit_log = AuditLog(Path(settings.audit_log_path))
+    # memory_root 留空（第一期默认）是合法状态：只读 4 方法不需要它，md 读写/
+    # cascade_sync/episode_editor 调用时才会因未配置而报错（见 everos_gateway 模块头）。
+    memory_root = Path(settings.everos_memory_root) if settings.everos_memory_root else None
     # 网关：EVEROS_GATEWAY=http 用真网关连 :8596，否则 mock（开发期 Windows 无 EverOS）。
     if settings.everos_gateway == "http":
+        # EVEROS_BIN 留空 → 用网关构造函数自己的裸名默认值（"everos"，兼容已把
+        # venv 加进 PATH 的环境）；配了才覆盖成全路径（生产按真机 PATH 实测配置）。
+        gateway_kwargs = {"everos_bin": settings.everos_bin} if settings.everos_bin else {}
         app.state.everos_gateway = HTTPEverOSGateway(
-            settings.everos_base_url, timeout=settings.everos_timeout
+            settings.everos_base_url,
+            timeout=settings.everos_timeout,
+            memory_root=memory_root,
+            **gateway_kwargs,
         )
     else:
         app.state.everos_gateway = MockEverOSGateway()
+    # episode_editor（Palimpsest 适配层）同样要 memory_root，留空则不建实例——
+    # deps.get_episode_editor 会据此给清楚的 503，而非裸 AttributeError。
+    # everos_bin 同一个配置值传给 gateway 和 episode_editor 两边——两套独立子
+    # 进程调用（真机验证坐实：Palimpsest.reindex_incremental 内部另起一次
+    # `everos cascade sync`），共享的是同一个"everos 装在哪"的事实，不共享代码。
+    if memory_root:
+        episode_editor_kwargs = {"everos_bin": settings.everos_bin} if settings.everos_bin else {}
+        app.state.episode_editor = EpisodeEditor(memory_root, **episode_editor_kwargs)
+    else:
+        app.state.episode_editor = None
     yield
     # 停机清理：HTTP 网关关闭 httpx client（mock 无此方法）。
     gw = app.state.everos_gateway
@@ -60,7 +80,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="ReadingSteiner 记忆管理 WebUI",
     description="基于 EverOS 自进化记忆引擎的记忆运维 WebUI（独立服务，分期按耦合度递进）",
-    version="0.1.0",
+    version="0.2.0",
     lifespan=lifespan,
 )
 
@@ -99,7 +119,7 @@ def _safe_spa_target(root: Path, full_path: str) -> Path | None:
 
 # ── 前端静态托管（生产；开发期 WEBUI_FRONTEND_DIR 留空则走 vite dev server）─────────
 # 设了 WEBUI_FRONTEND_DIR 且目录存在才挂载：前端与 /api 同源由一个 uvicorn 托管
-# （免 CORS、单端口、最省内存）。仍绑 127.0.0.1（安全边界见 docs/02）。
+# （免 CORS、单端口、最省内存，见 docs/05 决策）。仍绑 127.0.0.1（docs/02 不变）。
 # 此 catch-all 注册在 include_router 与 /health 之后，故不遮挡既有 API 与健康检查。
 _frontend_dir = Path(config_module.settings.frontend_dir or "")
 if config_module.settings.frontend_dir and _frontend_dir.is_dir():

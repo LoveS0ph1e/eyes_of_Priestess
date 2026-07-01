@@ -59,6 +59,15 @@ class Settings:
     # 默认留空：第一期不碰 md，避免误配置指向错误根目录；二三期上线前由部署注入。
     everos_memory_root: str = _env("EVEROS_MEMORY_ROOT", "")
 
+    # ── everos CLI 可执行文件路径（cascade_sync 用）──────────────
+    # 真机验证坐实：`everos` 装在 venv 内（~/everos/.venv/bin/everos），
+    # 不在登录 shell 或 systemd 服务的默认 PATH 里；裸命令会 subprocess
+    # FileNotFoundError。默认留空（与 everos_memory_root/frontend_dir 同一套"留空=
+    # 未配置"约定）——消费处（main.py）留空时回退网关构造函数自己的裸名默认值，
+    # 避免 .env 里 `EVEROS_BIN=`（空值）被 systemd EnvironmentFile 解析成"已设置为
+    # 空字符串"而覆盖掉本该生效的裸名默认。
+    everos_bin: str = _env("EVEROS_BIN", "")
+
     # ── audit_log 落盘位置 ────────────────────────────────────────
     audit_log_path: str = _env("WEBUI_AUDIT_LOG", "data/audit.jsonl")
 

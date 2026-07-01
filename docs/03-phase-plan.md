@@ -18,21 +18,33 @@
 
 **验收**：铭改完→真机发消息确认【永恒铭契】块随之变；`/epk` 各命令 WebUI 与 QQ 内行为一致。
 
-## 第二期 · episode 增删改（中耦合）
+## 第二期 · episode 增删改（中耦合，已落地）
 
-**范围**：补上 EverOS 缺失的 episode 删除/修改。
+**范围**：补上 EverOS 缺失的 episode 删除。
 
-机制：定位用户 episode 的 md → 用 EverOS `MarkdownWriter` 改/删 marker entry → `everos cascade sync <path>`。
+机制：包 `palimpsest` 批处理引擎（`backend/app/modules/palimpsest/`）对单条 episode entry 做
+DeleteEntry：定位 md 文件 → 删 `<!-- entry:id -->` 块、幂等维护 frontmatter `entry_count` →
+快照（可回滚）→ `everos cascade sync` 重索引。
 
-**核心耦合点**（就是当初要弄清的）：删/改 episode **必须 cascade sync**，否则 md 与 LanceDB 不一致（改了 md 但向量索引还是旧的→召回错乱）。片子档「中耦合」的本质 = 不需手动同时动三存储，但必须能调 cascade。
+**核心耦合点**：删 episode **必须 cascade sync**，否则 md 与向量索引不一致（改了 md 但索引还是旧的
+→ 召回错乱）。「中耦合」的本质 = 不需手动同时动多份存储，但必须能调 cascade。
 
-**仍开放决策**：cascade sync 怎么调——
-- 子进程跑 `everos cascade sync`：松耦合，依赖 CLI 可用。
-- import EverOS 包内 `CascadeOrchestrator`：紧耦合，免进程开销，EverOS 升级即裂。
+**cascade sync 调用方式（已定）**：子进程跑 `everos cascade sync <path>`（松耦合，依赖 CLI 可用，
+不 import EverOS 包内部实现，避免紧耦合导致 EverOS 升级即裂）。两种重索引模式二选一：
+- **full**（默认）：drop `.index`，重启后冷重建全量，正确性优先。
+- **incremental**：保留 `.index`，仅记录改动路径，重启后手动触发 `cascade sync` 补齐这些文件，代价小但范围窄。
 
-第二期落地时定，现 `everos_gateway` ABC 第一期只读 4 方法，写/cascade 方法不进 ABC（反过早抽象），第二期决策定了一并扩签名。
+三个端点（`backend/app/api/routes/readonly.py`）：
+- `GET .../plan`：dry-run 预览，展示会改哪个文件、删哪条 entry，零写入。
+- `DELETE ...`：真正执行；前置检查 EverOS 是否已停机（未停机→409，提示先 SSH 停机——
+  WebUI 不持 sudo/SSH 私钥，停/启机仍由运维手动完成）。
+- `POST .../reindex/{txn}`：incremental 模式重启后，手动触发对该次改动的强制同步。
 
-**验收**：删/改一条 episode→`get` 确认条目消失/变更→`search` 确认召回随之变。
+`everos_gateway` ABC 同批扩写（第一期只读 4 方法 → 二期共 8 方法），新增 `read_user_markdown` /
+`write_user_markdown`（乐观锁，`expected_sha256` 不符→409）/ `cascade_sync` / `is_everos_stopped`。
+
+**验收**：删一条 episode → `plan` 预览显示 diff → 停机 → `delete` 执行 → entry_count 正确递减、
+快照落盘 → 启机 → incremental 模式下 `reindex` 补齐索引 → `search` 确认召回随之变。
 
 ## 第三期 · 画像直接修改（高耦合+高风险，先评估再做）
 

@@ -6,7 +6,7 @@
 [project]
 name = "readingsteiner-webui-backend"
 # 版本系列代号：Sarastro
-version = "0.1.0"
+version = "0.2.0"
 description = "ReadingSteiner 记忆管理 WebUI 后端（FastAPI，独立服务）"
 requires-python = ">=3.12"
 

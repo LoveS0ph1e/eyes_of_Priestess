@@ -1,0 +1,5 @@
+# 真实 plan（含真实 owner_id/entry_id/生产路径）绝不进 git——只有 example-*.json
+# 泛化模板可提交。admin 在本机/服务器上另存真实 plan 时，文件名不要以 example- 开头
+# 即自动被排除（docs/06 §4 决策）。
+*.json
+!example-*.json

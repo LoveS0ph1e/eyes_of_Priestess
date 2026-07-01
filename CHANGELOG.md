@@ -2,6 +2,22 @@
 
 WebUI 版本系列代号 **Sarastro**。遵循[语义化版本](https://semver.org/lang/zh-CN/)，格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/)。
 
+## [0.2.0] · 第二期：episode 删除
+
+覆盖第二期能力：episode 增删改的第一块（删除），中耦合，需与 EverOS 向量索引同步。
+
+### 新增
+- **episode 删除**：包 Palimpsest 批处理引擎（`backend/app/modules/palimpsest/`），停机原子写 +
+  快照可回滚 + journal 审计流水。三端点：`GET .../plan` dry-run 预览、`DELETE ...` 真正执行、
+  `POST .../reindex/{txn}` 手动同步 incremental 重索引。
+- **`everos_gateway` ABC 扩写**：一期只读 4 方法 → 二期共 8 方法，新增 `read_user_markdown` /
+  `write_user_markdown`（乐观锁，版本冲突返 409）/ `cascade_sync` / `is_everos_stopped`。
+- **前端**：episode 列表加删除交互，确认弹窗展示改动预览、重索引模式（incremental / full）可选。
+
+### 说明
+- 停/启 EverOS 服务仍由运维手动 SSH 完成——WebUI 只组 plan + dry-run，不持 sudo/SSH 私钥。
+- 第三期（画像编辑）见 `docs/03-phase-plan.md`；对应后端模块（`profile_viewer`）仍为有意预留的桩。
+
 ## [0.1.0] - 2026-06-27 · Sarastro 首发
 
 首个公开版本，覆盖第一期能力。

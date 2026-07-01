@@ -1,0 +1,19 @@
+{
+  "name": "example-delete-entry",
+  "description": "Template: delete one or more whole episode entries by their bare entry_id (the id as it appears in the md marker, NOT the API's composite {owner_id}_{entry_id} form). Fill in <owner_id>/<entry_id> before use; never commit a real plan with real ids (see plans/.gitignore).",
+  "layout": {
+    "everos_root": "~/.everos",
+    "plugin_relationships": "~/qqbot/astrbot/data/plugin_data/astrbot_plugin_readingsteiner/relationships",
+    "app_id": "astrbot",
+    "project_id": "default_project"
+  },
+  "selector": {
+    "owner_ids": ["<owner_id>"],
+    "kinds": ["episode"],
+    "include_plugin_caches": false
+  },
+  "operation": {
+    "type": "delete_entry",
+    "entry_ids": ["<entry_id>"]
+  }
+}
